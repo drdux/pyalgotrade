@@ -265,7 +265,7 @@ class Broker(broker.Broker):
         """Sets the :class:`pyalgotrade.broker.fillstrategy.FillStrategy` to use."""
         self.__fillStrategy = strategy
 
-    def getFillStrategy(self):
+    def getFillStrategy(self) -> pyalgotrade.broker.fillstrategy.FillStrategy:
         """Returns the :class:`pyalgotrade.broker.fillstrategy.FillStrategy` currently set."""
         return self.__fillStrategy
 
@@ -536,3 +536,16 @@ class Broker(broker.Broker):
         self.notifyOrderEvent(
             broker.OrderEvent(activeOrder, broker.OrderEvent.Type.CANCELED, "User requested cancellation")
         )
+
+
+class CryptoTraits(broker.InstrumentTraits):
+    def roundQuantity(self, quantity):
+        return quantity
+
+
+class CryptoBroker(Broker):
+    def __init__(self, cash, barFeed, commission=None):
+        super(CryptoBroker, self).__init__(cash, barFeed, commission)
+
+    def getInstrumentTraits(self, instrument):
+        return CryptoTraits()

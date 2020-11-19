@@ -348,7 +348,7 @@ class Order(object):
     def setState(self, newState):
         self.__state = newState
 
-    def getExecutionInfo(self):
+    def getExecutionInfo(self) -> 'OrderExecutionInfo':
         """Returns the last execution information for this order, or None if nothing has been filled so far.
         This will be different every time an order, or part of it, gets filled.
 

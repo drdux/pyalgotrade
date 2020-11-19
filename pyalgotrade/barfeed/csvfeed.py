@@ -27,6 +27,8 @@ from pyalgotrade.utils import dt
 from pyalgotrade.utils import csvutils
 from pyalgotrade.barfeed import membf
 from pyalgotrade import bar
+from typing import List
+import json
 
 
 # Interface for csv row parsers.
@@ -38,6 +40,11 @@ class RowParser(object):
         raise NotImplementedError()
 
     def getDelimiter(self):
+        raise NotImplementedError()
+
+
+class ListParser(object):
+    def parseBar(self, ele: List):
         raise NotImplementedError()
 
 
@@ -113,6 +120,17 @@ class BarFeed(membf.BarFeed):
 
     def setBarFilter(self, barFilter):
         self.__barFilter = barFilter
+
+    def addBarsFromJson(self, instrument, path, listParser: ListParser):
+        loadedBars = []
+
+        with open(path, 'r') as fp:
+            for row in json.load(fp):
+                bar_ = listParser.parseBar(row)
+                if bar_ is not None and (self.__barFilter is None or self.__barFilter.includeBar(bar_)):
+                    loadedBars.append(bar_)
+
+        self.addBarsFromSequence(instrument, loadedBars)
 
     def addBarsFromCSV(self, instrument, path, rowParser, skipMalformedBars=False):
         def parse_bar_skip_malformed(row):
@@ -204,6 +222,25 @@ class GenericRowParser(RowParser):
         )
 
 
+class GenericListParser(ListParser):
+    def __init__(self, frequency, timezone, barClass=bar.BasicBar):
+        self.__frequency = frequency
+        self.__barClass = barClass
+        self.__timezone = timezone
+
+    def parseBar(self, ele: List):
+        dateTime = datetime.datetime.fromtimestamp(ele[0]/1000, self.__timezone)
+        open_ = ele[1]
+        high = ele[2]
+        low = ele[3]
+        close = ele[4]
+        volume = ele[5]
+        adjClose = None
+        return self.__barClass(
+            dateTime, open_, high, low, close, volume, adjClose, self.__frequency
+        )
+
+
 class GenericBarFeed(BarFeed):
     """A BarFeed that loads bars from CSV files that have the following format:
     ::
@@ -270,6 +307,24 @@ class GenericBarFeed(BarFeed):
 
     def setBarClass(self, barClass):
         self.__barClass = barClass
+
+    def addBarsFromJson(self, instrument, path, timezone=None):
+        """Loads bars for a given instrument from a JSON formatted file.
+        The instrument gets registered in the bar feed.
+
+        :param instrument: Instrument identifier.
+        :type instrument: string.
+        :param path: The path to the CSV file.
+        :type path: string.
+        :param timezone: The timezone to use to localize bars. Check :mod:`pyalgotrade.marketsession`.
+        :type timezone: A pytz timezone.
+        """
+        if timezone is None:
+            timezone = self.__timezone
+
+        listParser = GenericListParser(self.getFrequency(), timezone, self.__barClass)
+
+        super(GenericBarFeed, self).addBarsFromJson(instrument, path, listParser)
 
     def addBarsFromCSV(self, instrument, path, timezone=None, skipMalformedBars=False):
         """Loads bars for a given instrument from a CSV formatted file.

@@ -30,6 +30,7 @@ from pyalgotrade import dispatcher
 import pyalgotrade.strategy.position
 from pyalgotrade import logger
 from pyalgotrade.barfeed import resampled
+from typing import Union
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -140,7 +141,7 @@ class BaseStrategy(object):
         """Returns the :class:`pyalgotrade.barfeed.BaseBarFeed` that this strategy is using."""
         return self.__barFeed
 
-    def getBroker(self):
+    def getBroker(self) -> Union[pyalgotrade.broker.Broker, pyalgotrade.broker.backtesting.Broker]:
         """Returns the :class:`pyalgotrade.broker.Broker` used to handle order executions."""
         return self.__broker
 
